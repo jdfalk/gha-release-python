@@ -1,0 +1,43 @@
+name: 'Python Release Build'
+description: 'Build Python packages for release'
+author: 'jdfalk'
+
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.13'
+  protobuf-artifacts:
+    description: 'Whether protobuf artifacts are available'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download protobuf artifacts
+      if: inputs.protobuf-artifacts == 'true'
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      with:
+        name: protobuf-generated
+        path: proto-generated
+
+    - name: Build Python package
+      uses: jdfalk/release-python-action@796bcd7bd2678f1b44e01bd1aff4105939f2cbe6 # v1.0.2
+      with:
+        python-version: ${{ inputs.python-version }}
+        package-dir: .
+        run-tests: 'true'
+        test-command: pytest -m "not slow" --maxfail=1 --disable-warnings
+        pypi-token: dummy-no-publish
+        skip-existing: 'true'
+        verify-metadata: 'true'
+
+    - name: Upload Python dist artifacts
+      if: always()
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: python-dist
+        path: dist/**
+        if-no-files-found: ignore
+        retention-days: 14
